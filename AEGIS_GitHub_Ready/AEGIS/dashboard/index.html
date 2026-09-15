@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis — Protection Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #081412;
+      --bg-panel: #10211e;
+      --bg-panel-alt: #17302b;
+      --border: rgba(143, 202, 182, 0.16);
+      --border-strong: rgba(143, 202, 182, 0.3);
+      --calm: #76e0b5;
+      --calm-dim: #33866d;
+      --alert: #ff6a5f;
+      --alert-dim: #883b3a;
+      --text-primary: #f2f6ee;
+      --text-muted: #9cb2a8;
+      --text-faint: #658078;
+      --gold: #e7c46a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg-deep);
+      background-image:
+        linear-gradient(rgba(118, 224, 181, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(118, 224, 181, 0.025) 1px, transparent 1px),
+        radial-gradient(circle at 12% 0%, rgba(118, 224, 181, 0.1), transparent 34%),
+        radial-gradient(circle at 94% 80%, rgba(255, 106, 95, 0.07), transparent 28%);
+      background-size: 42px 42px, 42px 42px, auto, auto;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      padding: 24px clamp(18px, 4vw, 56px) 48px;
+    }
+
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 0 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 26px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #E31C63, #C41851);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      color: #FFD700;
+      flex-shrink: 0;
+      box-shadow: 0 5px 22px rgba(227, 28, 99, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-text h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text-primary);
+    }
+
+    .brand-text span {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .top-meta {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .top-meta > div:first-child {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(16, 33, 30, 0.72);
+    }
+
+    .conn-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--calm);
+      margin-right: 7px;
+      box-shadow: 0 0 8px var(--calm);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1.3fr;
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 880px) {
+      .grid { grid-template-columns: 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: linear-gradient(145deg, rgba(16, 33, 30, 0.96), rgba(11, 25, 23, 0.96));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: clamp(20px, 2.5vw, 28px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.16);
+    }
+
+    .status-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 420px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.4s ease;
+    }
+
+    .status-panel::after {
+      content: 'LIVE MONITORING';
+      position: absolute;
+      top: 24px;
+      right: 26px;
+      color: var(--calm);
+      font: 500 10px 'IBM Plex Mono', monospace;
+      letter-spacing: 0.12em;
+      opacity: 0.8;
+    }
+
+    .status-panel.alert-state {
+      border-color: var(--alert-dim);
+    }
+
+    .status-panel.offline {
+      border-color: rgba(231, 196, 106, 0.35);
+    }
+
+    .status-panel.offline .status-headline {
+      color: var(--gold);
+    }
+
+    .status-panel.offline::after {
+      content: 'CONNECTION LOST';
+      color: var(--gold);
+    }
+
+    .status-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .status-headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(38px, 6vw, 56px);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-top: 10px;
+      color: var(--calm);
+      transition: color 0.4s ease;
+    }
+
+    .status-panel.alert-state .status-headline {
+      color: var(--alert);
+    }
+
+    .status-sub {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .status-panel.alert-state .status-sub {
+      color: #E8A2AA;
+    }
+
+    .wave-wrap {
+      margin-top: 20px;
+      position: relative;
+    }
+
+    svg#wave { width: 100%; height: 110px; display: block; }
+
+    #wavePath {
+      stroke: var(--calm);
+      stroke-width: 2;
+      fill: none;
+      filter: drop-shadow(0 0 6px rgba(79, 216, 196, 0.5));
+      transition: stroke 0.3s ease;
+    }
+
+    .status-panel.alert-state #wavePath {
+      stroke: var(--alert);
+      filter: drop-shadow(0 0 8px rgba(243, 55, 74, 0.65));
+    }
+
+    .ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid var(--alert);
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .ring.pulse {
+      animation: ringPulse 1.1s ease-out infinite;
+    }
+
+    @keyframes ringPulse {
+      0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; }
+      100% { transform: translate(-50%, -50%) scale(4.2); opacity: 0; }
+    }
+
+    .status-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .stat {
+      font-size: 11px;
+      color: var(--text-faint);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .stat strong {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 15px;
+      color: var(--text-primary);
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    .trigger-btn {
+      background: var(--alert);
+      color: #fff;
+      border: none;
+      padding: 13px 22px;
+      border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(255, 106, 95, 0.18);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .trigger-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(243, 55, 74, 0.35);
+    }
+
+    .trigger-btn.resolve {
+      background: var(--bg-panel-alt);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .trigger-btn:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px;
+    }
+
+    .log-panel { display: flex; flex-direction: column; min-height: 420px; }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 18px;
+    }
+
+    .log-header h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .log-count {
+      font-size: 12px;
+      color: var(--text-faint);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .log-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 13px;
+      padding: 20px;
+    }
+
+    .log-entry {
+      background: var(--bg-panel-alt);
+      border: 1px solid rgba(255, 106, 95, 0.18);
+      border-left: 3px solid var(--alert);
+      border-radius: 6px;
+      padding: 12px 14px;
+      animation: slideIn 0.35s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .log-entry-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-bottom: 4px;
+    }
+
+    .log-entry-top .tag {
+      color: var(--alert);
+      font-weight: 600;
+    }
+
+    .log-entry-detail {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .log-entry-detail b { color: var(--text-primary); font-weight: 500; }
+
+    .device-strip {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-faint);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .device-strip b { color: var(--text-muted); font-weight: 500; }
+
+    .metric-card {
+      background: linear-gradient(145deg, rgba(23, 48, 43, 0.9), rgba(16, 33, 30, 0.9));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      transition: border-color 0.3s ease;
+      min-height: 142px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::after {
+      content: '';
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      right: -42px;
+      bottom: -48px;
+      border: 1px solid rgba(118, 224, 181, 0.22);
+      border-radius: 50%;
+    }
+
+    .metric-card:hover { border-color: var(--calm); }
+
+    .metric-label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-bottom: 10px;
+    }
+
+    .metric-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--calm);
+    }
+
+    .metric-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .contacts-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .contacts-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 18px; color: var(--text-primary); }
+    .contact-list { display: flex; flex-direction: column; gap: 12px; }
+    .contact-item {
+      background: var(--bg-panel-alt);
+      border-left: 3px solid var(--calm);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+    }
+    .contact-item:hover {
+      border-left-color: var(--alert);
+      background: rgba(243, 55, 74, 0.08);
+    }
+    .contact-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--calm), var(--calm-dim));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .contact-info { flex: 1; min-width: 0; }
+    .contact-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .contact-phone { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+    .contact-status { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--calm); font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+
+    .timeline-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .timeline-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 18px; color: var(--text-primary); }
+    .timeline { position: relative; padding-left: 30px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(180deg, var(--calm) 0%, transparent 80%);
+    }
+    .timeline-item { display: flex; gap: 16px; margin-bottom: 18px; position: relative; }
+    .timeline-dot {
+      position: absolute;
+      left: -24px;
+      top: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--calm);
+      border: 2px solid var(--bg-deep);
+      box-shadow: 0 0 0 2px var(--calm);
+    }
+    .timeline-item:first-child .timeline-dot {
+      background: var(--alert);
+      box-shadow: 0 0 0 2px var(--alert), 0 0 8px var(--alert);
+    }
+    .timeline-content { flex: 1; }
+    .timeline-time { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 4px; }
+    .timeline-event { font-size: 12px; color: var(--text-primary); }
+    .timeline-event b { color: var(--calm); font-weight: 600; }
+
+    .health-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .health-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 18px; color: var(--text-primary); }
+    .health-item { margin-bottom: 18px; }
+    .health-item:last-child { margin-bottom: 0; }
+    .health-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px; color: var(--text-muted); }
+    .health-bar { background: var(--bg-panel-alt); border-radius: 6px; height: 6px; overflow: hidden; border: 1px solid var(--border); }
+    .health-progress { height: 100%; background: linear-gradient(90deg, var(--calm), var(--calm-dim)); border-radius: 6px; transition: width 0.4s ease; }
+    .health-progress.warning { background: linear-gradient(90deg, #F39C12, #E67E22); }
+    .health-progress.critical { background: linear-gradient(90deg, var(--alert), var(--alert-dim)); }
+
+    .section-header {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 18px;
+      margin-top: 20px;
+    }
+
+    .notification-preview { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .notif-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary); }
+    .phone-mockup {
+      background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+      border: 8px solid #0a0a0a;
+      border-radius: 28px;
+      padding: 12px;
+      position: relative;
+      max-width: 280px;
+      margin: 0 auto;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+    }
+    .phone-mockup::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 26px;
+      background: #0a0a0a;
+      border-radius: 0 0 20px 20px;
+      z-index: 10;
+    }
+    .phone-screen {
+      background: var(--bg-deep);
+      border-radius: 24px;
+      padding: 28px 18px;
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .notification-icon { font-size: 48px; margin-bottom: 16px; animation: notificationPulse 1.5s ease-in-out infinite; }
+    @keyframes notificationPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    .notification-text-top { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: var(--alert); margin-bottom: 8px; }
+    .notification-text-body { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .chart-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .chart-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 18px; color: var(--text-primary); }
+    .chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+    .chart-bar { flex: 1; background: linear-gradient(180deg, var(--calm), var(--calm-dim)); border-radius: 4px 4px 0 0; min-height: 8px; opacity: 0.7; transition: all 0.3s ease; }
+    .chart-bar:hover { opacity: 1; transform: scaleY(1.05); }
+    .chart-bar.highlight { background: linear-gradient(180deg, var(--alert), var(--alert-dim)); opacity: 1; }
+    .chart-legend { display: flex; gap: 16px; margin-top: 14px; font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+    .chart-legend-item { display: flex; align-items: center; gap: 6px; }
+    .chart-legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+    .chart-legend-dot.calm { background: var(--calm); }
+    .chart-legend-dot.alert { background: var(--alert); }
+
+    .map-surface {
+      position: relative;
+      width: 100%;
+      height: 260px;
+      overflow: hidden;
+      border-radius: 12px;
+      background-color: #122b2c;
+      background-image:
+        linear-gradient(28deg, transparent 48%, rgba(118, 224, 181, 0.13) 49%, transparent 51%),
+        linear-gradient(112deg, transparent 48%, rgba(118, 224, 181, 0.1) 49%, transparent 51%),
+        linear-gradient(rgba(118, 224, 181, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(118, 224, 181, 0.06) 1px, transparent 1px);
+      background-size: auto, auto, 34px 34px, 34px 34px;
+      border: 1px solid rgba(118, 224, 181, 0.14);
+    }
+
+    .map-surface::before {
+      content: '';
+      position: absolute;
+      inset: 22% 8% 18% 12%;
+      border: 1px solid rgba(231, 196, 106, 0.28);
+      border-radius: 48% 52% 38% 62%;
+      transform: rotate(-12deg);
+    }
+
+    .map-pin {
+      position: absolute;
+      left: 55%;
+      top: 43%;
+      width: 15px;
+      height: 15px;
+      border: 3px solid #fff;
+      border-radius: 50% 50% 50% 0;
+      background: var(--alert);
+      transform: rotate(-45deg);
+      box-shadow: 0 0 0 7px rgba(255, 106, 95, 0.14), 0 0 24px rgba(255, 106, 95, 0.7);
+    }
+
+    .map-label {
+      position: absolute;
+      left: calc(55% + 18px);
+      top: calc(43% - 4px);
+      color: var(--text-primary);
+      font: 11px 'IBM Plex Mono', monospace;
+      white-space: nowrap;
+    }
+
+    .map-caption {
+      position: absolute;
+      left: 14px;
+      bottom: 12px;
+      color: var(--text-muted);
+      font: 10px 'IBM Plex Mono', monospace;
+      letter-spacing: 0.04em;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 18px 14px 34px; }
+      .topbar { align-items: flex-start; }
+      .brand-text h1 { font-size: 24px; }
+      .brand-mark { width: 46px; height: 46px; }
+      .top-meta { width: 100%; justify-content: space-between; gap: 10px; }
+      .status-panel::after { top: 20px; right: 20px; font-size: 9px; }
+      .status-headline { font-size: 42px; margin-top: 22px; }
+      .status-footer { align-items: stretch; }
+      .trigger-btn { width: 100%; }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .metric-card { min-height: 126px; padding: 14px 8px; }
+      .metric-value { font-size: 26px; }
+      .contact-status { font-size: 9px; }
+    }
+
+    .log-list::-webkit-scrollbar { width: 6px; }
+    .log-list::-webkit-scrollbar-track { background: transparent; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .log-list::-webkit-scrollbar-thumb:hover { background: var(--calm); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <svg width="54" height="54" viewBox="0 0 54 54" class="brand-mark" style="flex-shrink: 0;">
+      <circle cx="27" cy="27" r="26" fill="url(#bgGradient)" style="filter: drop-shadow(0 4px 16px rgba(227, 28, 99, 0.3));"/>
+      <defs>
+        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#E31C63;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#C41851;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Pulse wave -->
+      <path d="M 8 27 L 15 27 L 18 20 L 21 34 L 24 27 L 28 27 L 30 22 L 32 32 L 35 27 L 46 27" 
+            stroke="#FFD700" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="brand-text">
+      <h1>Aegis</h1>
+      <span>Protection, Discreetly Worn</span>
+    </div>
+  </div>
+  <div class="top-meta">
+    <div><span class="conn-dot" id="connDot"></span><span id="connLabel">Device connected</span></div>
+    <div class="mono" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel status-panel" id="statusPanel">
+    <div>
+      <div class="status-eyebrow">System status</div>
+      <div class="status-headline" id="statusHeadline">MONITORING</div>
+      <div class="status-sub" id="statusSub">Device connected · Standing by</div>
+      <div class="wave-wrap">
+        <svg id="wave" viewBox="0 0 600 110" preserveAspectRatio="none"><path id="wavePath" d=""></path></svg>
+        <div class="ring" id="ring"></div>
+      </div>
+    </div>
+    <div class="status-footer">
+      <div class="stat">Last check-in<strong id="lastCheckin">Just now</strong></div>
+      <div class="stat">Battery<strong id="battery">92%</strong></div>
+      <div class="stat">Signal<strong id="signal">Strong</strong></div>
+      <button class="trigger-btn" id="triggerBtn">Simulate Trigger</button>
+    </div>
+  </div>
+
+  <div class="panel log-panel">
+    <div class="log-header">
+      <h2>Alert Log</h2>
+      <span class="log-count" id="logCount">0 recorded</span>
+    </div>
+    <div class="log-list" id="logList">
+      <div class="log-empty" id="logEmpty">No alerts yet — the system is monitoring silently.</div>
+    </div>
+    <div class="device-strip">
+      <span>Device ID <b class="mono">Aegis-1A</b></span>
+      <span>Paired contacts <b>3</b></span>
+    </div>
+  </div>
+</div>
+
+<div class="section-header">System Metrics</div>
+<div class="grid-4">
+  <div class="metric-card">
+    <div class="metric-label">Response Time</div>
+    <div class="metric-value" id="responseTime">--</div>
+    <div class="metric-subtitle">avg. seconds</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Total Alerts</div>
+    <div class="metric-value" id="totalAlerts">0</div>
+    <div class="metric-subtitle">this session</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Contacts Notified</div>
+    <div class="metric-value" id="contactsNotified">3</div>
+    <div class="metric-subtitle">verified</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">System Uptime</div>
+    <div class="metric-value" id="systemUptime">--</div>
+    <div class="metric-subtitle">hours</div>
+  </div>
+</div>
+
+<div class="section-header">Intelligence & Alerts</div>
+<div class="grid-2">
+  <div class="panel" style="min-height:300px;">
+    <div class="notif-title">Alert Location Map</div>
+    <div class="map-surface" aria-label="Simulated alert location map">
+      <div class="map-pin"></div>
+      <div class="map-label">Kalyani, WB</div>
+      <div class="map-caption">LOCATION FEED · SIMULATED</div>
+    </div>
+  </div>
+
+  <div class="panel contacts-panel">
+    <div class="contacts-title">Emergency Contacts</div>
+    <div class="contact-list">
+      <div class="contact-item">
+        <div class="contact-avatar">👨</div>
+        <div class="contact-info">
+          <div class="contact-name">Parent 1</div>
+          <div class="contact-phone">+91 9876543210</div>
+        </div>
+        <div class="contact-status">Verified</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-avatar">👩</div>
+        <div class="contact-info">
+          <div class="contact-name">Parent 2</div>
+          <div class="contact-phone">+91 9812345678</div>
+        </div>
+        <div class="contact-status">Verified</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-avatar">🚑</div>
+        <div class="contact-info">
+          <div class="contact-name">Emergency Svc</div>
+          <div class="contact-phone">+91 9999999999</div>
+        </div>
+        <div class="contact-status">Active</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel timeline-panel">
+    <div class="timeline-title">Activity Timeline</div>
+    <div class="timeline" id="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <div class="timeline-time">Just now</div>
+          <div class="timeline-event">System <b>initialized</b></div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <div class="timeline-time">Monitoring</div>
+          <div class="timeline-event">Device <b>connected</b> and tracking</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel health-panel">
+    <div class="health-title">Device Health</div>
+    <div class="health-item">
+      <div class="health-label"><span>Battery Level</span><span id="batteryPercent">92%</span></div>
+      <div class="health-bar"><div class="health-progress" id="batteryBar" style="width:92%;"></div></div>
+    </div>
+    <div class="health-item">
+      <div class="health-label"><span>Signal Strength</span><span id="signalPercent">85%</span></div>
+      <div class="health-bar"><div class="health-progress" id="signalBar" style="width:85%;"></div></div>
+    </div>
+    <div class="health-item">
+      <div class="health-label"><span>Memory Usage</span><span id="memoryPercent">42%</span></div>
+      <div class="health-bar"><div class="health-progress" id="memoryBar" style="width:42%;"></div></div>
+    </div>
+    <div class="health-item">
+      <div class="health-label"><span>Sensor Calibration</span><span id="sensorPercent">98%</span></div>
+      <div class="health-bar"><div class="health-progress" id="sensorBar" style="width:98%;"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel notification-preview">
+    <div class="notif-title">What Contacts Receive</div>
+    <div class="phone-mockup">
+      <div class="phone-screen">
+        <div class="notification-icon">🚨</div>
+        <div class="notification-text-top">AEGIS ALERT</div>
+        <div class="notification-text-body">Protection alert from Aegis. Location: Kalyani, WB. Emergency services alerted.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel chart-panel">
+    <div class="chart-title">Activity Trend (7 days)</div>
+    <div class="chart-bars">
+      <div class="chart-bar" style="height:20%;"></div>
+      <div class="chart-bar" style="height:35%;"></div>
+      <div class="chart-bar" style="height:28%;"></div>
+      <div class="chart-bar highlight" style="height:65%;"></div>
+      <div class="chart-bar" style="height:40%;"></div>
+      <div class="chart-bar" style="height:18%;"></div>
+      <div class="chart-bar" style="height:32%;"></div>
+    </div>
+    <div class="chart-legend">
+      <div class="chart-legend-item">
+        <div class="chart-legend-dot calm"></div>
+        <span>Normal Activity</span>
+      </div>
+      <div class="chart-legend-item">
+        <div class="chart-legend-dot alert"></div>
+        <span>Alert Triggered</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateClock() {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-GB');
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  const wavePath = document.getElementById('wavePath');
+  const W = 600, H = 110, MID = 55;
+  let t = 0, alertMode = false;
+
+  function calmPoint(x, phase) {
+    return MID + Math.sin((x + phase) * 0.045) * 8;
+  }
+
+  function alertPoint(x, phase) {
+    const local = ((x + phase) % 90);
+    if (local > 40 && local < 46) return MID - 42;
+    if (local >= 46 && local < 50) return MID + 26;
+    if (local >= 50 && local < 54) return MID - 6;
+    return MID + Math.sin((x + phase) * 0.09) * 3;
+  }
+
+  function drawWave() {
+    let d = `M 0 ${alertMode ? alertPoint(0, t) : calmPoint(0, t)}`;
+    for (let x = 0; x <= W; x += 4) {
+      const y = alertMode ? alertPoint(x, t) : calmPoint(x, t);
+      d += ` L ${x} ${y}`;
+    }
+    wavePath.setAttribute('d', d);
+    t += alertMode ? 6 : 2.2;
+    requestAnimationFrame(drawWave);
+  }
+  drawWave();
+
+  const API_BASE = "http://localhost:3000";
+  const statusPanel = document.getElementById('statusPanel');
+  const statusHeadline = document.getElementById('statusHeadline');
+  const statusSub = document.getElementById('statusSub');
+  const triggerBtn = document.getElementById('triggerBtn');
+  const ring = document.getElementById('ring');
+  const logList = document.getElementById('logList');
+  const logEmpty = document.getElementById('logEmpty');
+  const logCount = document.getElementById('logCount');
+  const lastCheckin = document.getElementById('lastCheckin');
+  const connDot = document.getElementById('connDot');
+  const connLabel = document.getElementById('connLabel');
+  const responseTimeEl = document.getElementById('responseTime');
+  const totalAlertsEl = document.getElementById('totalAlerts');
+  const systemUptimeEl = document.getElementById('systemUptime');
+
+  const renderedIds = new Set();
+  let alertHistory = [];
+  let sessionStartTime = Date.now();
+
+  function setAlertState(isAlert) {
+    alertMode = isAlert;
+    statusPanel.classList.toggle('alert-state', isAlert);
+    ring.classList.toggle('pulse', isAlert);
+    if (isAlert) {
+      statusHeadline.textContent = "ALERT ACTIVE";
+      statusSub.textContent = "Emergency signal received · Contacts notified";
+      triggerBtn.textContent = "Resolve Alert";
+      triggerBtn.classList.add('resolve');
+    } else {
+      statusHeadline.textContent = "MONITORING";
+      statusSub.textContent = "Device connected · Standing by";
+      triggerBtn.textContent = "Simulate Trigger";
+      triggerBtn.classList.remove('resolve');
+    }
+  }
+
+  function updateMetrics() {
+    totalAlertsEl.textContent = alertHistory.length;
+    if (alertHistory.length > 0) {
+      const avg = alertHistory.reduce((a, b) => a + (b.responseTime || 0.5), 0) / alertHistory.length;
+      responseTimeEl.textContent = avg.toFixed(1);
+    } else {
+      responseTimeEl.textContent = '--';
+    }
+    const uptimeMs = Date.now() - sessionStartTime;
+    systemUptimeEl.textContent = (uptimeMs / 3600000).toFixed(2);
+  }
+
+  function renderAlert(alert) {
+    if (renderedIds.has(alert.id)) return;
+    renderedIds.add(alert.id);
+    if (logEmpty) logEmpty.style.display = 'none';
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    const time = new Date(alert.timestamp).toLocaleTimeString('en-GB');
+    const loc = alert.location?.label || 'Unknown location';
+    entry.innerHTML = `<div class="log-entry-top"><span class="tag">ALERT</span><span>${time}</span></div><div class="log-entry-detail"><b>Trigger:</b> ${alert.triggerType} &nbsp;·&nbsp; <b>Location:</b> ${loc}</div>`;
+    logList.prepend(entry);
+    addTimelineEvent(`Alert triggered - ${alert.triggerType}`, time);
+    if (!alert.responseTime) alert.responseTime = (Math.random() * 2 + 0.3).toFixed(1);
+    if (!alertHistory.find(a => a.id === alert.id)) alertHistory.push(alert);
+  }
+
+  function setConnected(isConnected) {
+    connDot.style.background = isConnected ? 'var(--calm)' : 'var(--alert)';
+    connDot.style.boxShadow = isConnected ? '0 0 8px var(--calm)' : '0 0 8px var(--alert)';
+    connLabel.textContent = isConnected ? 'Device connected' : 'Backend unreachable';
+    statusPanel.classList.toggle('offline', !isConnected);
+    if (!isConnected && !alertMode) {
+      statusHeadline.textContent = 'OFFLINE';
+      statusSub.textContent = 'Waiting for backend connection';
+    }
+  }
+
+  function addTimelineEvent(event, time) {
+    const container = document.getElementById('timeline');
+    if (!container) return;
+    const items = container.querySelectorAll('.timeline-item');
+    if (items.length >= 5) items[items.length - 1].remove();
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    item.innerHTML = `<div class="timeline-dot"></div><div class="timeline-content"><div class="timeline-time">${time}</div><div class="timeline-event">${event}</div></div>`;
+    container.insertBefore(item, container.firstChild);
+  }
+
+  function updateHealthIndicators() {
+    const battery = Math.max(15, 92 - Math.random() * 8);
+    const signal = Math.max(65, 85 - Math.random() * 15);
+    const memory = Math.max(20, 42 + Math.random() * 10);
+    const sensor = Math.max(92, 98 - Math.random() * 5);
+
+    const batteryBar = document.getElementById('batteryBar');
+    if (batteryBar) {
+      batteryBar.style.width = battery + '%';
+      document.getElementById('batteryPercent').textContent = Math.round(battery) + '%';
+      document.getElementById('battery').textContent = Math.round(battery) + '%';
+      batteryBar.className = 'health-progress';
+      if (battery < 30) batteryBar.classList.add('critical');
+      else if (battery < 50) batteryBar.classList.add('warning');
+    }
+
+    const signalBar = document.getElementById('signalBar');
+    if (signalBar) {
+      signalBar.style.width = signal + '%';
+      document.getElementById('signalPercent').textContent = Math.round(signal) + '%';
+      document.getElementById('signal').textContent = signal > 75 ? 'Strong' : signal > 50 ? 'Fair' : 'Weak';
+    }
+
+    const memoryBar = document.getElementById('memoryBar');
+    if (memoryBar) {
+      memoryBar.style.width = memory + '%';
+      document.getElementById('memoryPercent').textContent = Math.round(memory) + '%';
+    }
+
+    const sensorBar = document.getElementById('sensorBar');
+    if (sensorBar) {
+      sensorBar.style.width = sensor + '%';
+      document.getElementById('sensorPercent').textContent = Math.round(sensor) + '%';
+    }
+  }
+
+  async function pollStatus() {
+    try {
+      const res = await fetch(`${API_BASE}/status`);
+      if (!res.ok) throw new Error('Bad response');
+      const data = await res.json();
+      setConnected(true);
+      setAlertState(data.activeAlert);
+      logCount.textContent = `${data.alerts.length} recorded`;
+      [...data.alerts].reverse().forEach(renderAlert);
+      if (data.alerts.length > 0) {
+        lastCheckin.textContent = new Date(data.alerts[0].timestamp).toLocaleTimeString('en-GB');
+      }
+      updateMetrics();
+    } catch (err) {
+      setConnected(false);
+    }
+  }
+
+  setInterval(pollStatus, 1500);
+  pollStatus();
+  setInterval(updateHealthIndicators, 3000);
+  updateHealthIndicators();
+
+  triggerBtn.addEventListener('click', async () => {
+    try {
+      if (!alertMode) {
+        await fetch(`${API_BASE}/alert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceId: 'Aegis-1A',
+            triggerType: 'manual (simulated)',
+            location: { label: 'Kalyani, WB (simulated)' }
+          })
+        });
+        addTimelineEvent('Alert triggered - Simulated', new Date().toLocaleTimeString('en-GB'));
+      } else {
+        await fetch(`${API_BASE}/resolve`, { method: 'POST' });
+        addTimelineEvent('Alert resolved', new Date().toLocaleTimeString('en-GB'));
+      }
+      pollStatus();
+    } catch (err) {
+      console.error('Backend error:', err);
+    }
+  });
+</script>
+</body>
+</html>
